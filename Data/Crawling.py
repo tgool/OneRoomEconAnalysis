@@ -23,7 +23,6 @@ def get_oneroom_info(addr):  # 동이름 넣으면 정보 반환하도록 ex. �
     params = {"domain": "zigbang", "item_ids": ids[:900]}
     response = requests.post(url, params)
     items = response.json()["items"]
-    # print(items)
     colums = [
         "item_id",
         "sales_type",
@@ -31,12 +30,12 @@ def get_oneroom_info(addr):  # 동이름 넣으면 정보 반환하도록 ex. �
         "rent",
         "address1",
         "manage_cost",
-        "floor",
+        # "floor",
         "size_m2",
         "service_type",
+        # "room_type",
     ]
     df = pd.DataFrame(items)[colums]
-    print(df)
     df = df[df["address1"].str.contains(addr)].reset_index(drop=True)
     df = df.rename(
         columns={
@@ -45,11 +44,23 @@ def get_oneroom_info(addr):  # 동이름 넣으면 정보 반환하도록 ex. �
             "deposit": "보증금",
             "rent": "월세",
             "manage_cost": "관리비",
-            "floor": "층수",
+            # "floor": "층수",
             "size_m2": "평수",
-            "service_type": "형태",
+            "service_type": "건물 형태",
+            # "room_type": "분리형",  # 1 오픈형 2 분리형 3 투룸 4 쓰리룸+
         }
     )
+    # 아이디 값으로 원룸 etc 정보를 추출한다(4번째 request)
+    id_list = df["item_id"].tolist()
+    for i in id_list:
+        url = f"https://apis.zigbang.com/v3/items/{i}?version=&domain=zigbang"
+        response = requests.get(url)
+        data = response.json()["item"]
+        df.loc[df["item_id"] == i, "엘레베이터"] = data["elevator"]
+        df.loc[df["item_id"] == i, "룸 형태"] = data["roomType"]
+        df.loc[df["item_id"] == i, "층수"] = data["floor"]["floor"]
+        df.loc[df["item_id"] == i, "건물 층수"] = data["floor"]["allFloors"]
+        df.loc[df["item_id"] == i, "집 방향"] = data["roomDirection"]  # se
+        df.loc[df["item_id"] == i, "옵션 수"] = len(data["options"])
 
-    print(df)
     return df
