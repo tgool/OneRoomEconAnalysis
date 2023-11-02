@@ -1,9 +1,11 @@
 import requests
 import pandas as pd
 import geohash2
+from GPT_model import GPTModel as gpt_model
 
 
 def get_oneroom_info(addr):  # 동이름 넣으면 정보 반환하도록 ex. 광진구 화양동
+    # GPT = gpt_model()
     # 동이름으로 원룸의 위도와 경도을 받기(1번째 request)
     url = f"https://apis.zigbang.com/v2/search?leaseYn=N&q={addr}&serviceType=원룸"
     response = requests.get(url)
@@ -65,7 +67,10 @@ def get_oneroom_info(addr):  # 동이름 넣으면 정보 반환하도록 ex. �
         df.loc[df["item_id"] == i, "집_방향"] = data["roomDirection"]  # se
         df.loc[df["item_id"] == i, "옵션_수"] = len(data["options"])
         df.loc[df["item_id"] == i, "지하철역_수"] = len(response.json()["subways"])
-        # df.loc[df["item_id"] == i, "준공시기"] = data["approveDate"]
+        # print("loading..")
+        # gpt_date = GPT.edit_date(data["approveDate"])
+        # print("done")
+        df.loc[df["item_id"] == i, "준공년수"] = data["approveDate"]
         df.loc[df["item_id"] == i, "주차여부"] = data["parkingAvailableText"]
         for poi in data["neighborhoods"]["nearbyPois"]:
             df.loc[df["item_id"] == i, poi["poiType"]] = poi["distance"]
@@ -84,3 +89,27 @@ def get_oneroom_info(addr):  # 동이름 넣으면 정보 반환하도록 ex. �
     #    if df["룸_형태"].isin(["투룸", "쓰리룸"]).any():
     #        df = df[~df["룸_형태"].isin(["투룸", "쓰리룸"])]
     return df
+
+
+def univ(name):
+    lat, lng = None, None
+    url = f"https://apis.zigbang.com/v2/search?leaseYn=N&q={name}&serviceType=원룸"
+    response = requests.get(url)
+    data = response.json()
+    print(data)
+    for item in data["items"]:
+        if item["hint"] == "본교":
+            lat, lng = (
+                item["lat"],
+                item["lng"],
+            )
+    return lat, lng
+
+
+def distance(id):
+    url = f"https://apis.zigbang.com/v3/items/{id}?version=&domain=zigbang"
+    response = requests.get(url)
+    data = response.json()["item"]
+    lat = data["randomLocation"]["lat"]
+    lng = data["randomLocation"]["lng"]
+    return lat, lng
